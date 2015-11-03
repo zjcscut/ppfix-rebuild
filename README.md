@@ -28,4 +28,4 @@ Mybatis分页插件github的项目地址：https://github.com/pagehelper/Mybatis
 
 #author zjcscut 
 #email zjc@ppfix.cn
-#Copyright © 2015-2016 by PPfix，zjc  All rights reserved 
+#Copyright © 2015-2016 by PPfix，zjc.  All rights reserved 
