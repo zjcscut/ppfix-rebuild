@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ The MIT License (MIT)
+  ~
+  ~ Copyright (c) 2015 zjc@ppfix.cn
+  ~
+  ~ Free of charge.
+  ~ To use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  ~ copies of the Software, and to permit persons to whom the Software is
+  ~ furnished to do so, subject to the following conditions:
+  ~
+  ~ The above copyright notice and this permission notice shall be included in
+  ~ all copies or substantial portions of the Software.
+  ~
+  ~  ############复制或者使用时请保留以上内容#####################
+  -->
+
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!--扫描包-->
+    <context:component-scan base-package="com.ppfix.web.service"/>
+    <context:component-scan base-package="com.ppfix.web.dao"/>
+
+    <import resource="classpath:quaztz-config.xml"/>
+
+    <import resource="classpath:jedis-config.xml" />
+
+    <!--测试注入bean-->
+    <bean id="userInfoDAO" class="com.ppfix.web.dao.impl.UserInfoDAOImpl"/>
+
+    <!--扫描资源文件-->
+    <context:property-placeholder location="classpath:config.properties"/>
+
+    <!--Druid数据源-->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <property name="driverClassName" value="${jdbc.driverClass}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.user}"/>
+        <property name="password" value="${jdbc.password}"/>
+
+        <!-- 初始化连接数量 -->
+        <property name="initialSize" value="${druid.initialSize}" />
+        <!-- 最大并发连接数 -->
+        <property name="maxActive" value="${druid.maxActive}" />
+        <!-- 最小空闲连接数 -->
+        <property name="minIdle" value="${druid.minIdle}" />
+        <!-- 配置获取连接等待超时的时间 -->
+        <property name="maxWait" value="${druid.maxWait}" />
+        <!-- 超过时间限制是否回收 -->
+        <property name="removeAbandoned" value="${druid.removeAbandoned}" />
+        <!-- 超过时间限制多长； -->
+        <property name="removeAbandonedTimeout" value="${druid.removeAbandonedTimeout}" />
+        <!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+        <property name="timeBetweenEvictionRunsMillis" value="${druid.timeBetweenEvictionRunsMillis}" />
+        <!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+        <property name="minEvictableIdleTimeMillis" value="${druid.minEvictableIdleTimeMillis}" />
+        <!-- 用来检测连接是否有效的sql，要求是一个查询语句-->
+        <property name="validationQuery" value="${druid.validationQuery}" />
+        <!-- 申请连接的时候检测 -->
+        <property name="testWhileIdle" value="${druid.testWhileIdle}" />
+        <!-- 申请连接时执行validationQuery检测连接是否有效，配置为true会降低性能 -->
+        <property name="testOnBorrow" value="${druid.testOnBorrow}" />
+        <!-- 归还连接时执行validationQuery检测连接是否有效，配置为true会降低性能  -->
+        <property name="testOnReturn" value="${druid.testOnReturn}" />
+        <!-- 打开PSCache，并且指定每个连接上PSCache的大小 -->
+        <property name="poolPreparedStatements" value="${druid.poolPreparedStatements}" />
+        <property name="maxPoolPreparedStatementPerConnectionSize" value="${druid.maxPoolPreparedStatementPerConnectionSize}" />
+        <!--属性类型是字符串，通过别名的方式配置扩展插件，常用的插件有：
+                监控统计用的filter:stat
+                日志用的filter:log4j
+               防御SQL注入的filter:wall -->
+        <property name="filters" value="${druid.filters}" />
+    </bean>
+
+  <!--执行慢的sql语句记录-->
+    <bean id="stat-filter" class="com.alibaba.druid.filter.stat.StatFilter">
+        <!--大于3秒为慢sql-->
+        <property name="slowSqlMillis" value="3000" />
+        <property name="logSlowSql" value="true" />
+    </bean>
+
+    <!--sqlsession工厂-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="mapperLocations">
+            <array>
+                <value>classpath:mapper/*.xml</value>
+            </array>
+        </property>
+        <property name="typeAliasesPackage" value="com.ppfix.web.model"/>
+        <property name="plugins">
+            <array>
+                <bean class="com.github.pagehelper.PageHelper">
+                    <property name="properties">
+                        <value>
+                            dialect=mysql
+                            reasonable=true
+                        </value>
+                    </property>
+                </bean>
+            </array>
+        </property>
+    </bean>
+
+
+
+    <!--hibernate session工厂-->
+    <bean id="sessionFactory"
+          class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource" />
+        <property name="packagesToScan">
+            <list>
+                <value>com.ppfix.web.model</value>
+            </list>
+        </property>
+        <property name="mappingLocations">
+            <list>
+                <value>classpath:hibernate/*.hbm.xml</value>
+            </list>
+        </property>
+        <property name="hibernateProperties">
+            <props>
+                <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+                 <!--<prop key="current_session_context_class"> org.springframework.orm.hibernate4.SpringSessionContext</prop>-->
+                <prop key="hibernate.format_sql">false</prop>
+                <prop key="hibernate.show_sql">false</prop>
+                <prop key="hibernate.use_sql_comments">true</prop>
+                <prop key="hibernate.max_fetch_depth">3</prop>
+                <prop key="hibernate.jdbc.batch_size">20</prop>
+                <prop key="hibernate.jdbc.fetch_size">20</prop>
+                <prop key="hibernate.cache.use_second_level_cache">false</prop>
+            </props>
+        </property>
+    </bean>
+
+
+    <!--Mapper-->
+    <bean class="tk.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.ppfix.web.mapper"/>
+        <!-- 3.2.2版本新特性，markerInterface可以起到mappers配置的作用，详细情况需要看Marker接口类 -->
+        <property name="markerInterface" value="com.ppfix.web.util.MyMapper"/>
+        <!-- 通用Mapper通过属性注入进行配置，默认不配置时会注册Mapper<T>接口
+        <property name="properties">
+            <value>
+                mappers=tk.mybatis.mapper.common.Mapper
+            </value>
+        </property>
+        -->
+    </bean>
+
+    <!--sqlSession-->
+    <bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate" scope="prototype">
+        <constructor-arg index="0" ref="sqlSessionFactory"/>
+    </bean>
+
+
+    <!-- 配置事务容器 -->
+    <bean id="transactionManager"
+          class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory"></property>
+    </bean>
+
+    <!--定义事务规则-->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="save*" propagation="REQUIRED" />
+            <tx:method name="add*" propagation="REQUIRED" />
+            <tx:method name="create*" propagation="REQUIRED" />
+            <tx:method name="insert*" propagation="REQUIRED" />
+            <tx:method name="update*" propagation="REQUIRED" />
+            <tx:method name="merge*" propagation="REQUIRED" />
+            <tx:method name="del*" propagation="REQUIRED" />
+            <tx:method name="remove*" propagation="REQUIRED" />
+            <tx:method name="put*" propagation="REQUIRED" />
+            <tx:method name="gen*" propagation="REQUIRED" />
+            <tx:method name="complete*" propagation="REQUIRED" />
+            <tx:method name="import*" propagation="REQUIRED" />
+            <tx:method name="open*" propagation="REQUIRED" />
+            <tx:method name="publish*" propagation="REQUIRED" />
+            <tx:method name="init*" propagation="REQUIRED" />
+
+            <tx:method name="change*" propagation="REQUIRED" />
+            <tx:method name="*Change*" propagation="REQUIRED" />
+            <tx:method name="*" propagation="REQUIRED" read-only="true" />
+        </tx:attributes>
+    </tx:advice>
+
+
+    <!--定义事务入口-->
+    <!--多个切点-->
+    <aop:config proxy-target-class="true">
+        <aop:pointcut id="daoMethod" expression="execution(* com.ppfix.web.dao.impl..*.*(..))"/>
+        <aop:pointcut id="appService" expression="execution(* com.ppfix.web.service..*Service*.*(..))"/>
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="daoMethod" />
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="appService"/>
+    </aop:config>
+
+    <!--开启AOP监听，只对当前配置文件有效-->
+    <aop:aspectj-autoproxy />
+
+    <context:component-scan base-package="com.ppfix.web" />
+
+    <!--配置拦截器链-->
+    <bean
+            class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
+        <property name="interceptors">
+            <!-- 多个拦截器,顺序执行 -->
+            <list>
+                <ref bean="authorityInterceptor" />
+            </list>
+        </property>
+    </bean>
+
+    <!--权限拦截器-->
+    <bean id="authorityInterceptor" class="com.ppfix.web.filter.AuthorityInterceptor">
+    </bean>
+
+
+    <!--全局异常捕捉-->
+    <bean class="com.ppfix.web.exception.GlobalExceptionResolver" />
+    <context:annotation-config />
+
+    <!--配置fastjson-->
+    <bean class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+        <property name="messageConverters">
+            <list>
+                <bean class="com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter"></bean>
+            </list>
+        </property>
+    </bean>
+
+</beans>

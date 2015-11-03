@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+    <class name="com.ppfix.web.model.UserLoginInfo" table="user login info">
+        <id name="Id" type="java.lang.Integer">
+            <column name="id"/>
+            <generator class="identity"/>
+        </id>
+        <property name="username" type="java.lang.String">
+            <column name="username" length="32" not-null="true"/>
+        </property>
+
+        <property name="logindate" type="java.util.Date">
+            <column name="logindate"/>
+        </property>
+
+        <property name="loginip" type="java.lang.String">
+            <column name="loginip" length="16"/>
+        </property>
+
+    </class>
+</hibernate-mapping>
